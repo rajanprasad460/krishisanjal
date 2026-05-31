@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KrishiSanjal | Hyperlocal Rain Forecast for Nepal Farmers</title>
+  <meta name="description" content="KrishiSanjal provides hyperlocal rain possibility, rainfall timing, and farmer-friendly agricultural advice for Nepal." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <div class="logo">KS</div>
+      <div>
+        <h1>KrishiSanjal</h1>
+        <p>कृषि सञ्जाल · Hyperlocal Rain Intelligence</p>
+      </div>
+    </div>
+    <nav>
+      <a href="#forecast">Forecast</a>
+      <a href="#advice">Advice</a>
+      <a href="#report">Report</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-text">
+        <p class="eyebrow">For Nepal Farmers</p>
+        <h2>Know before it rains.</h2>
+        <p>
+          Check rain possibility for your exact field, not only your district.
+          KrishiSanjal converts weather data into simple farming decisions.
+        </p>
+        <div class="hero-actions">
+          <button id="useLocationBtn">Use My Location</button>
+          <a class="secondary-btn" href="#manual">Enter Location Manually</a>
+        </div>
+      </div>
+      <div class="hero-card">
+        <span>Today</span>
+        <strong id="heroRain">--%</strong>
+        <p>Rain possibility near your selected location</p>
+      </div>
+    </section>
+
+    <section class="panel" id="manual">
+      <div class="section-title">
+        <p class="eyebrow">Location</p>
+        <h2>Select or enter your farm location</h2>
+      </div>
+
+      <div class="location-grid">
+        <label>
+          Quick Location
+          <select id="quickLocation">
+            <option value="27.7172,85.3240,Kathmandu">Kathmandu</option>
+            <option value="26.6500,87.9900,Birtamod, Jhapa">Birtamod, Jhapa</option>
+            <option value="27.5291,83.4525,Bhairahawa">Bhairahawa</option>
+            <option value="28.2096,83.9856,Pokhara">Pokhara</option>
+            <option value="28.0500,81.6167,Nepalgunj">Nepalgunj</option>
+            <option value="27.6833,84.4333,Bharatpur, Chitwan">Bharatpur, Chitwan</option>
+            <option value="26.4831,87.2834,Biratnagar">Biratnagar</option>
+          </select>
+        </label>
+
+        <label>
+          Latitude
+          <input id="latInput" type="number" step="0.0001" value="27.7172" />
+        </label>
+
+        <label>
+          Longitude
+          <input id="lonInput" type="number" step="0.0001" value="85.3240" />
+        </label>
+
+        <button id="checkBtn">Check Rain</button>
+      </div>
+      <p id="statusText" class="status">Ready. Select a location and check rain possibility.</p>
+      <div id="locationDetails" class="location-details">Location name will appear here after GPS or forecast search.</div>
+    </section>
+
+    <section class="forecast-grid" id="forecast">
+      <article class="card main-card">
+        <p class="eyebrow">Rain Possibility</p>
+        <h2 id="placeName">Selected Location</h2>
+        <div class="big-number" id="rainProbability">--%</div>
+        <p id="rainSummary">Rain forecast will appear here.</p>
+      </article>
+
+      <article class="card">
+        <p class="eyebrow">Expected Rainfall</p>
+        <h3 id="rainAmount">-- mm</h3>
+        <p>Total expected rainfall today.</p>
+      </article>
+
+      <article class="card">
+        <p class="eyebrow">Best Field Window</p>
+        <h3 id="safeWindow">--</h3>
+        <p>Estimated safer period for outdoor field activity.</p>
+      </article>
+
+      <article class="card">
+        <p class="eyebrow">Confidence</p>
+        <h3 id="confidence">--</h3>
+        <p>Based on rain probability and rainfall intensity.</p>
+      </article>
+    </section>
+
+    <section class="panel" id="advice">
+      <div class="section-title">
+        <p class="eyebrow">Farmer Advice</p>
+        <h2>Recommended action</h2>
+      </div>
+      <div id="adviceList" class="advice-list">
+        <div class="advice-item">Check a location to get irrigation, spraying, and harvesting advice.</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <p class="eyebrow">Hourly Timing</p>
+        <h2>When is rain likely?</h2>
+      </div>
+      <div id="hourlyList" class="hourly-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <p class="eyebrow">7-Day View</p>
+        <h2>Upcoming rainfall possibility</h2>
+      </div>
+      <div id="dailyList" class="daily-list"></div>
+    </section>
+
+    <section class="panel report" id="report">
+      <div>
+        <p class="eyebrow">Coming Next</p>
+        <h2>Farmer rain reports</h2>
+        <p>
+          Later, farmers can report: raining now, no rain, light rain, or heavy rain.
+          These local reports can help improve village-level accuracy over time.
+        </p>
+      </div>
+      <button disabled>Report Local Weather</button>
+    </section>
+  </main>
+
+  <footer>
+    <p>KrishiSanjal · Built for Nepal farmers · Forecast powered by Open-Meteo</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
