@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 
+
 <body>
   <header class="site-header">
     <div class="brand">
@@ -135,9 +136,13 @@
       </div>
       <!--
 	  <div id="hourlyList" class="hourly-list"></div>
+	  <div id="hourlyChart" class="weather-chart"></div>
 	  -->
 	  
-	  <div id="hourlyChart" class="weather-chart"></div>
+	  
+<div class="chart-box">
+  <canvas id="hourlyChart"></canvas>
+</div>
     </section>
 
     <section class="panel">
@@ -147,8 +152,12 @@
       </div>
 	  <!--
       <div id="dailyList" class="daily-list"></div>
-	  -->
 	  <div id="dailyChart" class="weather-chart"></div>
+	  -->
+<div class="chart-box">
+  <canvas id="dailyChart"></canvas>
+</div>
+	  
     </section>
 
     <section class="panel" id="notices">
@@ -181,10 +190,12 @@
     </section>
   </main>
 
+
+
   <footer>
     <p>KrishiSanjal · Built for Nepal farmers · Forecast powered by Open-Meteo · Notices powered by AI summaries</p>
   </footer>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

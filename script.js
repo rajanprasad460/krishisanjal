@@ -80,89 +80,227 @@ function renderAdvice(rainChance, rainAmount, temp) {
   adviceList.innerHTML = advice.map(item => `<div class="advice-item">${escapeHTML(item)}</div>`).join("");
 }
 
+let hourlyChartInstance = null;
+let dailyChartInstance = null;
+
 function renderHourly(hourly) {
-  const chart = document.getElementById("hourlyChart");
-  chart.innerHTML = "";
+  const canvas = document.getElementById("hourlyChart");
+
+  if (!canvas || typeof Chart === "undefined") {
+    console.error("Chart.js not loaded or hourly canvas missing");
+    return;
+  }
+
+  const labels = [];
+  const rain = [];
+  const temp = [];
 
   const now = new Date();
-  let count = 0;
 
   for (let i = 0; i < hourly.time.length; i++) {
     const time = new Date(hourly.time[i]);
+
     if (time < now) continue;
 
-    const hour = time.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
+    labels.push(
+      time.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+      })
+    );
 
-    const temp = hourly.temperature_2m[i];
-    const rainChance = hourly.precipitation_probability[i] || 0;
-    const rainAmount = hourly.precipitation[i] || 0;
+    rain.push(hourly.precipitation_probability[i] ?? 0);
+    temp.push(hourly.temperature_2m[i] ?? 0);
 
-    const barHeight = Math.max(4, rainChance);
-
-    const column = document.createElement("div");
-    column.className = "chart-column";
-
-    column.innerHTML = `
-      <div class="temp-label">🌡️ ${temp}°C</div>
-
-      <div class="bar-wrap">
-        <div class="rain-bar" style="height:${barHeight}%"></div>
-      </div>
-
-      <div class="rain-label">🌧️ ${rainChance}%</div>
-      <div class="rain-label">${rainAmount} mm</div>
-      <div class="time-label">${hour}</div>
-    `;
-
-    chart.appendChild(column);
-
-    count++;
-    if (count >= 12) break;
+    if (labels.length >= 12) break;
   }
+
+  if (hourlyChartInstance) {
+    hourlyChartInstance.destroy();
+  }
+
+  hourlyChartInstance = new Chart(canvas, {
+    data: {
+      labels,
+      datasets: [
+        {
+          type: "bar",
+          label: "Rain Chance (%)",
+          data: rain,
+          backgroundColor: "rgba(37, 99, 235, 0.55)",
+          borderColor: "rgba(37, 99, 235, 1)",
+          borderWidth: 1,
+          borderRadius: 6,
+          yAxisID: "y"
+        },
+        {
+          type: "line",
+          label: "Temperature (°C)",
+          data: temp,
+          borderColor: "rgba(220, 38, 38, 1)",
+          backgroundColor: "rgba(220, 38, 38, 1)",
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          tension: 0.35,
+          fill: false,
+          yAxisID: "y1"
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              if (context.dataset.label.includes("Rain")) {
+                return `Rain Chance: ${context.raw}%`;
+              }
+
+              if (context.dataset.label.includes("Temperature")) {
+                return `Temperature: ${context.raw}°C`;
+              }
+
+              return `${context.dataset.label}: ${context.raw}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          position: "left",
+          title: {
+            display: true,
+            text: "Rain %"
+          }
+        },
+        y1: {
+          position: "right",
+          title: {
+            display: true,
+            text: "Temperature °C"
+          },
+          grid: {
+            drawOnChartArea: false
+          }
+        }
+      }
+    }
+  });
 }
 
 function renderDaily(daily) {
-  const chart = document.getElementById("dailyChart");
-  chart.innerHTML = "";
+  const canvas = document.getElementById("dailyChart");
 
-  for (let i = 0; i < daily.time.length; i++) {
-    const date = new Date(daily.time[i]);
+  if (!canvas || typeof Chart === "undefined") {
+    console.error("Chart.js not loaded or daily canvas missing");
+    return;
+  }
 
-    const label = date.toLocaleDateString([], {
+  const labels = daily.time.map(date =>
+    new Date(date).toLocaleDateString([], {
       weekday: "short",
       month: "short",
       day: "numeric"
-    });
+    })
+  );
 
-    const rainChance = daily.precipitation_probability_max[i] || 0;
-    const rainAmount = daily.precipitation_sum[i] || 0;
-    const maxTemp = daily.temperature_2m_max[i];
-    const minTemp = daily.temperature_2m_min[i];
+  const rain = daily.precipitation_probability_max.map(v => v ?? 0);
 
-    const barHeight = Math.max(4, rainChance);
+  const tempRange = daily.temperature_2m_min.map((minTemp, i) => ({
+    x: labels[i],
+    y: [
+      minTemp,
+      daily.temperature_2m_max[i]
+    ]
+  }));
 
-    const column = document.createElement("div");
-    column.className = "chart-column week-column";
+  const tempTrend = daily.temperature_2m_min.map((minTemp, i) =>
+    (
+      minTemp +
+      daily.temperature_2m_max[i]
+    ) / 2
+  );
 
-    column.innerHTML = `
-      <div class="temp-label">🌡️ ${minTemp}° / ${maxTemp}°C</div>
-
-      <div class="bar-wrap">
-        <div class="rain-bar" style="height:${barHeight}%"></div>
-      </div>
-
-      <div class="rain-label">🌧️ ${rainChance}%</div>
-      <div class="rain-label">${rainAmount} mm</div>
-      <div class="time-label">${label}</div>
-    `;
-
-    chart.appendChild(column);
+  if (dailyChartInstance) {
+    dailyChartInstance.destroy();
   }
-}
 
+  dailyChartInstance = new Chart(canvas, {
+    data: {
+      labels,
+      datasets: [
+        {
+          type: "bar",
+          label: "Rain Chance (%)",
+          data: rain,
+          backgroundColor: "rgba(37, 99, 235, 0.55)",
+          yAxisID: "y"
+        },
+        {
+          type: "bar",
+          label: "Temperature Range",
+          data: tempRange,
+          backgroundColor: "rgba(239, 68, 68, 0.35)",
+          borderColor: "rgba(220, 38, 38, 1)",
+          borderWidth: 2,
+          borderRadius: 6,
+          yAxisID: "y1"
+        },
+        {
+          type: "line",
+          label: "Temperature Trend",
+          data: tempTrend,
+          borderColor: "rgba(220, 38, 38, 1)",
+          backgroundColor: "rgba(220, 38, 38, 1)",
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          tension: 0.35,
+          fill: false,
+          yAxisID: "y1"
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          position: "left",
+          title: {
+            display: true,
+            text: "Rain %"
+          }
+        },
+        y1: {
+          position: "right",
+          title: {
+            display: true,
+            text: "Temperature °C"
+          },
+          grid: {
+            drawOnChartArea: false
+          }
+        }
+      }
+    }
+  });
+}
 
 
 async function checkRain(lat, lon, name = "Selected Location") {
