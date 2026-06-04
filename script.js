@@ -1,277 +1,502 @@
-const quickLocation = document.getElementById('quickLocation');
-const latInput = document.getElementById('latInput');
-const lonInput = document.getElementById('lonInput');
-const checkBtn = document.getElementById('checkBtn');
-const useLocationBtn = document.getElementById('useLocationBtn');
-const statusText = document.getElementById('statusText');
-const locationDetails = document.getElementById('locationDetails');
+const useLocationBtn = document.getElementById("useLocationBtn");
+const checkBtn = document.getElementById("checkBtn");
+const quickLocation = document.getElementById("quickLocation");
+const latInput = document.getElementById("latInput");
+const lonInput = document.getElementById("lonInput");
 
-const placeName = document.getElementById('placeName');
-const rainProbability = document.getElementById('rainProbability');
-const heroRain = document.getElementById('heroRain');
-const rainSummary = document.getElementById('rainSummary');
-const rainAmount = document.getElementById('rainAmount');
-const safeWindow = document.getElementById('safeWindow');
-const confidence = document.getElementById('confidence');
-const adviceList = document.getElementById('adviceList');
-const hourlyList = document.getElementById('hourlyList');
-const dailyList = document.getElementById('dailyList');
+const statusText = document.getElementById("statusText");
+const locationDetails = document.getElementById("locationDetails");
 
-quickLocation.addEventListener('change', () => {
-  const [lat, lon] = quickLocation.value.split(',');
-  latInput.value = lat;
-  lonInput.value = lon;
-});
-
-checkBtn.addEventListener('click', async () => {
-  const selected = quickLocation.value.split(',');
-  const selectedName = selected.slice(2).join(', ');
-  const lat = Number(latInput.value);
-  const lon = Number(lonInput.value);
-
-  const place = selectedName
-    ? { name: selectedName, fullName: selectedName }
-    : await reverseGeocode(lat, lon);
-
-  fetchForecast(lat, lon, place.name || 'Selected Location', place);
-});
-
-useLocationBtn.addEventListener('click', () => {
-  if (!navigator.geolocation) {
-    statusText.textContent = 'GPS location is not supported by this browser.';
-    return;
-  }
-
-  statusText.textContent = 'Getting your location...';
-  navigator.geolocation.getCurrentPosition(
-    async position => {
-      const lat = Number(position.coords.latitude.toFixed(5));
-      const lon = Number(position.coords.longitude.toFixed(5));
-      latInput.value = lat;
-      lonInput.value = lon;
-
-      statusText.textContent = 'Finding your location name...';
-      const place = await reverseGeocode(lat, lon);
-      fetchForecast(lat, lon, place.name || 'Your Current Location', place);
-    },
-    () => {
-      statusText.textContent = 'Location permission denied. Please enter latitude and longitude manually.';
-    }
-  );
-});
-
-
-async function reverseGeocode(lat, lon) {
-  if (!lat || !lon) {
-    return { name: 'Selected Location', fullName: 'Location name unavailable' };
-  }
-
-  const url = new URL('https://nominatim.openstreetmap.org/reverse');
-  url.searchParams.set('format', 'jsonv2');
-  url.searchParams.set('lat', lat);
-  url.searchParams.set('lon', lon);
-  url.searchParams.set('zoom', '12');
-  url.searchParams.set('addressdetails', '1');
-
-  try {
-    const response = await fetch(url.toString(), {
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
-
-    if (!response.ok) throw new Error('Reverse geocoding failed');
-    const data = await response.json();
-    const address = data.address || {};
-
-    const localName =
-      address.city ||
-      address.town ||
-      address.village ||
-      address.municipality ||
-      address.county ||
-      address.state_district ||
-      data.name ||
-      'Detected Location';
-
-    const district = address.county || address.state_district || '';
-    const province = address.state || '';
-    const country = address.country || '';
-    const fullName = [localName, district, province, country].filter(Boolean).join(', ');
-
-    return {
-      name: localName,
-      fullName: fullName || data.display_name || 'Detected Location'
-    };
-  } catch (error) {
-    console.warn(error);
-    return {
-      name: 'Your Current Location',
-      fullName: 'Location name unavailable. Forecast is still based on your GPS coordinates.'
-    };
-  }
+function setStatus(text) {
+  statusText.innerText = text;
 }
 
-function renderLocationDetails(lat, lon, place) {
-  if (!locationDetails) return;
-
-  const name = place?.fullName || place?.name || 'Location name not available';
-  locationDetails.innerHTML = `
-    <strong>📍 ${name}</strong><br>
-    Latitude: ${Number(lat).toFixed(5)} · Longitude: ${Number(lon).toFixed(5)}
-  `;
+function escapeHTML(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
-async function fetchForecast(lat, lon, name, place = null) {
-  if (!lat || !lon) {
-    statusText.textContent = 'Please enter valid latitude and longitude.';
-    return;
-  }
-
-  statusText.textContent = 'Fetching rain forecast...';
-  renderLocationDetails(lat, lon, place);
-
-  const params = new URLSearchParams({
-    latitude: lat,
-    longitude: lon,
-    timezone: 'auto',
-    forecast_days: 7,
-    hourly: 'precipitation_probability,precipitation,temperature_2m,relative_humidity_2m',
-    daily: 'precipitation_probability_max,precipitation_sum'
-  });
-
-  try {
-    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
-    if (!response.ok) throw new Error('Forecast request failed');
-    const data = await response.json();
-    renderForecast(data, name);
-    statusText.textContent = `Forecast updated for ${name}.`;
-    renderLocationDetails(lat, lon, place);
-  } catch (error) {
-    console.error(error);
-    statusText.textContent = 'Could not fetch forecast. Please try again later.';
-  }
+function formatValue(value, fallback = "--") {
+  if (value === null || value === undefined || Number.isNaN(value)) return fallback;
+  return value;
 }
 
-function renderForecast(data, name) {
-  const todayProb = Math.round(data.daily.precipitation_probability_max[0] ?? 0);
-  const todayRain = Number(data.daily.precipitation_sum[0] ?? 0).toFixed(1);
-
-  placeName.textContent = name;
-  rainProbability.textContent = `${todayProb}%`;
-  heroRain.textContent = `${todayProb}%`;
-  rainAmount.textContent = `${todayRain} mm`;
-
-  const confidenceText = getConfidence(todayProb, todayRain);
-  confidence.textContent = confidenceText;
-
-  const likelyHours = getLikelyRainHours(data.hourly);
-  safeWindow.textContent = likelyHours.length ? 'Before rain window' : 'Most of day';
-  rainSummary.textContent = likelyHours.length
-    ? `Rain is more likely around ${likelyHours[0]} to ${likelyHours[likelyHours.length - 1]}.`
-    : 'Low rain signal for today based on current forecast.';
-
-  renderAdvice(todayProb, Number(todayRain), likelyHours);
-  renderHourly(data.hourly);
-  renderDaily(data.daily);
+function formatNumber(value, decimals = 1, fallback = "--") {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return number.toFixed(decimals).replace(/\.0$/, "");
 }
 
-function getConfidence(prob, rain) {
-  if (prob >= 70 && rain >= 5) return 'High';
-  if (prob >= 45 || rain >= 2) return 'Medium';
-  return 'Low';
+function getSelectedLocation() {
+  const [lat, lon, ...nameParts] = quickLocation.value.split(",");
+
+  return {
+    lat: Number(lat),
+    lon: Number(lon),
+    name: nameParts.join(",").trim() || "Selected Location"
+  };
 }
 
-function getLikelyRainHours(hourly) {
-  const today = new Date().toISOString().slice(0, 10);
-  const hours = [];
-
-  hourly.time.forEach((time, index) => {
-    if (!time.startsWith(today)) return;
-    const probability = hourly.precipitation_probability[index] ?? 0;
-    const rain = hourly.precipitation[index] ?? 0;
-    if (probability >= 50 || rain > 0.5) {
-      hours.push(formatHour(time));
-    }
-  });
-
-  return hours;
+function getConfidence(rainChance, rainAmount) {
+  if (rainChance >= 75 || rainAmount >= 10) return "High";
+  if (rainChance >= 45 || rainAmount >= 3) return "Moderate";
+  return "Low";
 }
 
-function renderAdvice(prob, rain, likelyHours) {
+function getSafeWindow(rainChance) {
+  if (rainChance >= 70) return "Avoid outdoor work";
+  if (rainChance >= 40) return "Work carefully";
+  return "Mostly safe";
+}
+
+function renderAdvice(rainChance, rainAmount, temp) {
+  const adviceList = document.getElementById("adviceList");
+
   const advice = [];
 
-  if (prob >= 70 || rain >= 8) {
-    advice.push(['Avoid pesticide spraying today.', 'danger']);
-    advice.push(['Irrigation is probably not required.', 'warn']);
-    advice.push(['Protect harvested crops and stored grains.', 'danger']);
-  } else if (prob >= 40 || rain >= 2) {
-    advice.push(['Spray only if you can finish early and leaves can dry.', 'warn']);
-    advice.push(['Delay irrigation until the next forecast update.', 'warn']);
-    advice.push(['Field work is safer before the likely rain period.', '']);
+  if (rainChance >= 70) {
+    advice.push("High rain possibility. Avoid pesticide spraying and fertilizer application.");
+    advice.push("Check drainage in vegetable fields and lowland areas.");
+  } else if (rainChance >= 40) {
+    advice.push("Moderate rain possibility. Complete urgent field work early.");
+    advice.push("Delay chemical spraying if clouds are increasing.");
   } else {
-    advice.push(['Pesticide spraying is likely safer today, but avoid windy periods.', '']);
-    advice.push(['Irrigation may be needed for water-sensitive crops.', 'warn']);
-    advice.push(['Good day for harvesting if soil condition is suitable.', '']);
+    advice.push("Low rain possibility. Irrigation may be needed for dry fields.");
+    advice.push("Good window for harvesting, drying, and spraying if wind is calm.");
   }
 
-  if (likelyHours.length) {
-    advice.push([`Likely rain window: ${likelyHours[0]} - ${likelyHours[likelyHours.length - 1]}.`, 'warn']);
+  if (rainAmount >= 10) {
+    advice.push("Heavy rainfall expected. Protect seedlings and avoid waterlogging.");
   }
 
-  adviceList.innerHTML = advice.map(([text, type]) => `
-    <div class="advice-item">
-      <span>${text}</span>
-      <span class="badge ${type}">${type === 'danger' ? 'High Risk' : type === 'warn' ? 'Caution' : 'OK'}</span>
-    </div>
-  `).join('');
+  if (Number(temp) >= 34) {
+    advice.push("High temperature. Irrigate sensitive crops and avoid midday field work.");
+  }
+
+  adviceList.innerHTML = advice.map(item => `<div class="advice-item">${escapeHTML(item)}</div>`).join("");
 }
 
 function renderHourly(hourly) {
-  const today = new Date().toISOString().slice(0, 10);
-  const rows = hourly.time
-    .map((time, index) => ({
-      time,
-      probability: hourly.precipitation_probability[index] ?? 0,
-      rain: hourly.precipitation[index] ?? 0
-    }))
-    .filter(row => row.time.startsWith(today))
-    .filter((_, index) => index % 2 === 0)
-    .slice(0, 12);
+  const hourlyList = document.getElementById("hourlyList");
+  hourlyList.innerHTML = "";
 
-  hourlyList.innerHTML = rows.map(row => {
-    const risk = row.probability >= 70 || row.rain > 2 ? 'danger' : row.probability >= 40 || row.rain > 0.3 ? 'warn' : '';
-    return `
-      <div class="hour-row">
-        <strong>${formatHour(row.time)}</strong>
-        <span>${Math.round(row.probability)}% chance · ${Number(row.rain).toFixed(1)} mm</span>
-        <span class="badge ${risk}">${risk === 'danger' ? 'Rain likely' : risk === 'warn' ? 'Possible' : 'Low'}</span>
-      </div>
+  if (!hourly || !Array.isArray(hourly.time)) {
+    hourlyList.innerHTML = "<p class='empty-text'>Hourly forecast is not available.</p>";
+    return;
+  }
+
+  const now = new Date();
+
+  for (let i = 0; i < hourly.time.length; i++) {
+    const time = new Date(hourly.time[i]);
+    if (time < now) continue;
+
+    const hour = time.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+    const temp = formatValue(hourly.temperature_2m?.[i]);
+    const rainChance = formatValue(hourly.precipitation_probability?.[i]);
+    const rainAmount = formatValue(hourly.precipitation?.[i]);
+
+    const row = document.createElement("div");
+    row.className = "hour-row";
+
+    row.innerHTML = `
+      <strong>${hour}</strong>
+      <span>🌡️ ${escapeHTML(temp)}°C</span>
+      <span>🌧️ ${escapeHTML(rainChance)}% chance</span>
+      <span>💧 ${escapeHTML(rainAmount)} mm</span>
     `;
-  }).join('');
+
+    hourlyList.appendChild(row);
+
+    if (hourlyList.children.length >= 12) break;
+  }
+
+  if (hourlyList.children.length === 0) {
+    hourlyList.innerHTML = "<p class='empty-text'>No upcoming hourly forecast found.</p>";
+  }
 }
 
 function renderDaily(daily) {
-  dailyList.innerHTML = daily.time.map((date, index) => {
-    const prob = Math.round(daily.precipitation_probability_max[index] ?? 0);
-    const rain = Number(daily.precipitation_sum[index] ?? 0).toFixed(1);
-    const risk = prob >= 70 || rain > 8 ? 'danger' : prob >= 40 || rain > 2 ? 'warn' : '';
-    return `
-      <div class="day-row">
-        <strong>${formatDate(date)}</strong>
-        <span>${prob}% chance · ${rain} mm</span>
-        <span class="badge ${risk}">${risk === 'danger' ? 'Wet' : risk === 'warn' ? 'Watch' : 'Dry'}</span>
-      </div>
+  const dailyList = document.getElementById("dailyList");
+  dailyList.innerHTML = "";
+
+  if (!daily || !Array.isArray(daily.time)) {
+    dailyList.innerHTML = "<p class='empty-text'>Daily forecast is not available.</p>";
+    return;
+  }
+
+  for (let i = 0; i < daily.time.length; i++) {
+    const row = document.createElement("div");
+    row.className = "day-row";
+
+    row.innerHTML = `
+      <strong>${escapeHTML(daily.time[i])}</strong>
+      <span>🌡️ ${escapeHTML(formatValue(daily.temperature_2m_min?.[i]))}°C - ${escapeHTML(formatValue(daily.temperature_2m_max?.[i]))}°C</span>
+      <span>🌧️ ${escapeHTML(formatValue(daily.precipitation_probability_max?.[i]))}% · ${escapeHTML(formatValue(daily.precipitation_sum?.[i]))} mm</span>
     `;
-  }).join('');
+
+    dailyList.appendChild(row);
+  }
 }
 
-function formatHour(time) {
-  return new Date(time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+async function checkRain(lat, lon, name = "Selected Location") {
+  try {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      setStatus("Please enter a valid latitude and longitude.");
+      return;
+    }
+
+    setStatus("Loading forecast...");
+
+    const url =
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+      `&current=temperature_2m,relative_humidity_2m,precipitation,rain` +
+      `&hourly=temperature_2m,precipitation_probability,precipitation` +
+      `&daily=precipitation_probability_max,precipitation_sum,temperature_2m_max,temperature_2m_min` +
+      `&timezone=auto`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Weather request failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    const rainChance = Number(data.daily?.precipitation_probability_max?.[0] ?? 0);
+    const rainAmount = Number(data.daily?.precipitation_sum?.[0] ?? 0);
+    const currentTempRaw = data.current?.temperature_2m ?? data.current_weather?.temperature ?? data.hourly?.temperature_2m?.[0];
+    const currentTemp = formatNumber(currentTempRaw, 1);
+
+    document.getElementById("placeName").innerText = name;
+    locationDetails.innerText = `${name} · Latitude: ${Number(lat).toFixed(4)}, Longitude: ${Number(lon).toFixed(4)}`;
+
+    document.getElementById("heroRain").innerText = `${rainChance}%`;
+    document.getElementById("heroTemp").innerText = `Temperature: ${currentTemp}°C`;
+
+    document.getElementById("rainProbability").innerText = `${rainChance}%`;
+    document.getElementById("currentTemp").innerText = `${currentTemp}°C`;
+    document.getElementById("rainAmount").innerText = `${rainAmount} mm`;
+
+    document.getElementById("rainSummary").innerText =
+      `Current temperature is ${currentTemp}°C. Rain chance today is ${rainChance}%, with expected rainfall of ${rainAmount} mm.`;
+
+    document.getElementById("safeWindow").innerText = getSafeWindow(rainChance);
+    document.getElementById("confidence").innerText = getConfidence(rainChance, rainAmount);
+
+    renderAdvice(rainChance, rainAmount, currentTemp);
+    renderHourly(data.hourly);
+    renderDaily(data.daily);
+
+    setStatus("Forecast updated.");
+  } catch (error) {
+    console.error(error);
+    setStatus("Could not load forecast. Please try again.");
+  }
 }
 
-function formatDate(date) {
-  return new Date(date).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+async function getLocationName(lat, lon) {
+  try {
+    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
+    const response = await fetch(url);
+    if (!response.ok) return "Your Location";
+
+    const data = await response.json();
+    return data.city || data.locality || data.principalSubdivision || data.countryName || "Your Location";
+  } catch (error) {
+    return "Your Location";
+  }
 }
 
-fetchForecast(27.7172, 85.3240, 'Kathmandu');
+function useCurrentLocation() {
+  if (!navigator.geolocation) {
+    checkRain(27.7172, 85.3240, "Kathmandu");
+    return;
+  }
+
+  setStatus("Getting your location...");
+
+  navigator.geolocation.getCurrentPosition(
+    async position => {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+
+      latInput.value = lat.toFixed(4);
+      lonInput.value = lon.toFixed(4);
+
+      const locationName = await getLocationName(lat, lon);
+      checkRain(lat, lon, locationName);
+    },
+    () => {
+      setStatus("Location permission denied. Showing Kathmandu forecast.");
+      checkRain(27.7172, 85.3240, "Kathmandu");
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000
+    }
+  );
+}
+
+useLocationBtn.addEventListener("click", useCurrentLocation);
+
+checkBtn.addEventListener("click", () => {
+  const lat = Number(latInput.value);
+  const lon = Number(lonInput.value);
+
+  checkRain(lat, lon, "Manual Location");
+});
+
+quickLocation.addEventListener("change", () => {
+  const { lat, lon, name } = getSelectedLocation();
+
+  latInput.value = lat.toFixed(4);
+  lonInput.value = lon.toFixed(4);
+
+  checkRain(lat, lon, name);
+});
+
+window.addEventListener("load", () => {
+  const { lat, lon, name } = getSelectedLocation();
+  checkRain(lat, lon, name);
+});
+
+
+/* ---------------- AKC NOTICES ---------------- */
+
+const noticesContainer = document.getElementById("noticesContainer");
+const noticeSearch = document.getElementById("noticeSearch");
+
+const BS_MONTH_DAYS = [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30];
+
+function bsToNumber(bsDate) {
+  if (!bsDate || !String(bsDate).includes("-")) return null;
+
+  const [y, m, d] = String(bsDate).split("-").map(Number);
+
+  if (!y || !m || !d || m < 1 || m > 12 || d < 1 || d > 32) return null;
+
+  const daysBeforeMonth = BS_MONTH_DAYS.slice(0, m - 1).reduce((sum, days) => sum + days, 0);
+  return y * 365 + daysBeforeMonth + d;
+}
+
+function formatListItem(item) {
+  if (item && typeof item === "object") {
+    const values = Object.values(item).filter(Boolean);
+    return values.length ? values.join(": ") : JSON.stringify(item);
+  }
+
+  return item;
+}
+
+function listItems(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return "<p class='empty-text'>Not mentioned.</p>";
+  }
+
+  return `<ul>${items.map(item => `<li>${escapeHTML(formatListItem(item))}</li>`).join("")}</ul>`;
+}
+
+function latestPublishedNumber(notices) {
+  const dates = notices
+    .map(n => bsToNumber(n.published_date))
+    .filter(Boolean);
+
+  return dates.length ? Math.max(...dates) : null;
+}
+
+function isClosedDeadline(value) {
+  return /closed|expired|समाप्त|बन्द/i.test(String(value || ""));
+}
+
+function isContinuousDeadline(value) {
+  return /continuous|ongoing|open|निरन्तर/i.test(String(value || ""));
+}
+
+function getDeadlineInfo(deadline, latestDateNumber) {
+  const deadlineText = String(deadline || "").trim();
+
+  if (!deadlineText) {
+    return { state: "none", daysLeft: null };
+  }
+
+  if (isClosedDeadline(deadlineText)) {
+    return { state: "expired", daysLeft: null };
+  }
+
+  if (isContinuousDeadline(deadlineText)) {
+    return { state: "active", daysLeft: null };
+  }
+
+  const deadlineNumber = bsToNumber(deadlineText);
+
+  if (!deadlineNumber || !latestDateNumber) {
+    return { state: "none", daysLeft: null };
+  }
+
+  const daysLeft = deadlineNumber - latestDateNumber;
+  return {
+    state: daysLeft >= 0 ? "active" : "expired",
+    daysLeft
+  };
+}
+
+function normalizeNotice(notice) {
+  return {
+    ...notice,
+    published_date: notice.published_date || notice.date || "",
+    deadline: notice.deadline || notice.deadline_ai || "",
+    pdf_url: notice.pdf_url || notice.link || "",
+    source: notice.source || "",
+    summary: notice.summary || "Summary not available for this notice.",
+    details: notice.details || "",
+    plain_explanation: notice.plain_explanation || notice.details || "",
+    eligibility: notice.eligibility || [],
+    required_documents: notice.required_documents || [],
+    benefits: notice.benefits || [],
+    application_process: notice.application_process || [],
+    important_points: notice.important_points || [],
+    contact_information: notice.contact_information || []
+  };
+}
+
+function renderNotices(notices) {
+  const normalizedNotices = notices
+    .map(normalizeNotice)
+    .sort((a, b) => (bsToNumber(b.published_date) || 0) - (bsToNumber(a.published_date) || 0));
+  const latest = latestPublishedNumber(normalizedNotices);
+
+  let activeCount = 0;
+  let expiredCount = 0;
+
+  noticesContainer.innerHTML = normalizedNotices.map(notice => {
+    const deadline = notice.deadline_ai || notice.deadline || "";
+    const deadlineInfo = getDeadlineInfo(deadline, latest);
+
+    let deadlineClass = "neutral-notice";
+    let clock = "";
+    let badgeClass = "badge-neutral";
+    let badgeText = "NO DEADLINE";
+
+    if (deadlineInfo.state === "active") {
+      activeCount++;
+      deadlineClass = "active-notice";
+      badgeClass = "badge-active";
+      badgeText = "ACTIVE";
+      clock = deadlineInfo.daysLeft === null
+        ? `<div class="deadline-clock active-deadline">⏰ Open / continuous</div>`
+        : `<div class="deadline-clock active-deadline">⏰ ${deadlineInfo.daysLeft} day(s) left</div>`;
+    } else if (deadlineInfo.state === "expired") {
+      expiredCount++;
+      deadlineClass = "expired-notice";
+      badgeClass = "badge-closed";
+      badgeText = "EXPIRED";
+      clock = `<div class="deadline-clock expired-deadline">⏰ Deadline expired</div>`;
+    }
+
+    return `
+      <article class="notice-card ${deadlineClass}">
+        <div class="notice-top">
+          <span class="notice-badge ${badgeClass}">
+            ${badgeText}
+          </span>
+          <span class="notice-badge badge-new">LAST 30 DAYS</span>
+        </div>
+
+        <h3>${escapeHTML(notice.title || "Untitled Notice")}</h3>
+
+        <div class="notice-meta">
+          <span>Published: <strong>${escapeHTML(notice.published_date || "N/A")}</strong></span>
+          <span>Deadline: <strong>${escapeHTML(deadline || "Not mentioned")}</strong></span>
+        </div>
+
+        ${clock}
+
+        <div class="ai-summary">
+          <strong>AI Summary</strong>
+          <p>${escapeHTML(notice.summary || "Summary not available.")}</p>
+        </div>
+
+        <details>
+          <summary>View full details</summary>
+
+          <p class="plain-explanation">
+            ${escapeHTML(notice.plain_explanation || notice.details || "No detailed explanation available.")}
+          </p>
+
+          <h4>Eligibility</h4>
+          ${listItems(notice.eligibility)}
+
+          <h4>Required Documents</h4>
+          ${listItems(notice.required_documents)}
+
+          <h4>Benefits</h4>
+          ${listItems(notice.benefits)}
+
+          <h4>Application Process</h4>
+          ${listItems(notice.application_process)}
+
+          <h4>Important Points</h4>
+          ${listItems(notice.important_points)}
+
+          <h4>Contact Information</h4>
+          ${listItems(notice.contact_information)}
+        </details>
+
+        <div class="notice-links">
+          ${notice.pdf_url ? `<a href="${escapeHTML(notice.pdf_url)}" target="_blank" rel="noopener">Original File</a>` : ""}
+          ${notice.source ? `<a class="source-link" href="${escapeHTML(notice.source)}" target="_blank" rel="noopener">Source</a>` : ""}
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  document.getElementById("totalNotices").innerText = normalizedNotices.length;
+  document.getElementById("activeNotices").innerText = activeCount;
+  document.getElementById("expiredNotices").innerText = expiredCount;
+
+  if (normalizedNotices.length === 0) {
+    noticesContainer.innerHTML = "<p>No notices found for the latest 30-day period.</p>";
+  }
+}
+
+fetch("notices.json")
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`Notice request failed with status ${response.status}`);
+    }
+
+    return response.json();
+  })
+  .then(allNotices => {
+    const normalizedNotices = allNotices.map(normalizeNotice);
+    const latest = latestPublishedNumber(normalizedNotices);
+
+    const recentOnly = normalizedNotices.filter(notice => {
+      const published = bsToNumber(notice.published_date);
+      return published && latest && latest - published <= 30;
+    });
+
+    renderNotices(recentOnly);
+
+    noticeSearch.addEventListener("input", () => {
+      const q = noticeSearch.value.toLowerCase();
+
+      const filtered = recentOnly.filter(notice =>
+        JSON.stringify(notice).toLowerCase().includes(q)
+      );
+
+      renderNotices(filtered);
+    });
+  })
+  .catch(error => {
+    console.error(error);
+    noticesContainer.innerHTML = "Could not load notices.json";
+  });

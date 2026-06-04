@@ -3,22 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KrishiSanjal | Hyperlocal Rain Forecast for Nepal Farmers</title>
-  <meta name="description" content="KrishiSanjal provides hyperlocal rain possibility, rainfall timing, and farmer-friendly agricultural advice for Nepal." />
+  <title>KrishiSanjal | Rain Forecast & Agriculture Notices</title>
+  <meta name="description" content="KrishiSanjal provides hyperlocal rain, temperature, farming advice, and AI summarized agriculture notices for Nepal farmers." />
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
   <header class="site-header">
     <div class="brand">
       <div class="logo">KS</div>
       <div>
         <h1>KrishiSanjal</h1>
-        <p>कृषि सञ्जाल · Hyperlocal Rain Intelligence</p>
+        <p>कृषि सञ्जाल · Rain + Agriculture Notices</p>
       </div>
     </div>
     <nav>
       <a href="#forecast">Forecast</a>
       <a href="#advice">Advice</a>
+      <a href="#notices">Notices</a>
       <a href="#report">Report</a>
     </nav>
   </header>
@@ -29,7 +31,7 @@
         <p class="eyebrow">For Nepal Farmers</p>
         <h2>Know before it rains.</h2>
         <p>
-          Check rain possibility for your exact field, not only your district.
+          Check rain possibility and temperature for your exact field.
           KrishiSanjal converts weather data into simple farming decisions.
         </p>
         <div class="hero-actions">
@@ -37,10 +39,11 @@
           <a class="secondary-btn" href="#manual">Enter Location Manually</a>
         </div>
       </div>
+
       <div class="hero-card">
         <span>Today</span>
         <strong id="heroRain">--%</strong>
-        <p>Rain possibility near your selected location</p>
+        <p id="heroTemp">Temperature: --°C</p>
       </div>
     </section>
 
@@ -76,16 +79,23 @@
 
         <button id="checkBtn">Check Rain</button>
       </div>
-      <p id="statusText" class="status">Ready. Select a location and check rain possibility.</p>
-      <div id="locationDetails" class="location-details">Location name will appear here after GPS or forecast search.</div>
+
+      <p id="statusText" class="status">Loading your location forecast...</p>
+      <div id="locationDetails" class="location-details">Location will appear here.</div>
     </section>
 
     <section class="forecast-grid" id="forecast">
       <article class="card main-card">
-        <p class="eyebrow">Rain Possibility</p>
+        <p class="eyebrow">Rain + Temperature</p>
         <h2 id="placeName">Selected Location</h2>
         <div class="big-number" id="rainProbability">--%</div>
-        <p id="rainSummary">Rain forecast will appear here.</p>
+        <p id="rainSummary">Forecast will appear here.</p>
+      </article>
+
+      <article class="card">
+        <p class="eyebrow">Current Temperature</p>
+        <h3 id="currentTemp">--°C</h3>
+        <p>Live temperature near selected location.</p>
       </article>
 
       <article class="card">
@@ -120,7 +130,7 @@
     <section class="panel">
       <div class="section-title">
         <p class="eyebrow">Hourly Timing</p>
-        <h2>When is rain likely?</h2>
+        <h2>Rain and temperature by hour</h2>
       </div>
       <div id="hourlyList" class="hourly-list"></div>
     </section>
@@ -128,9 +138,27 @@
     <section class="panel">
       <div class="section-title">
         <p class="eyebrow">7-Day View</p>
-        <h2>Upcoming rainfall possibility</h2>
+        <h2>Upcoming rainfall and temperature</h2>
       </div>
       <div id="dailyList" class="daily-list"></div>
+    </section>
+
+    <section class="panel" id="notices">
+      <div class="section-title">
+        <p class="eyebrow">Government Agriculture Notices</p>
+        <h2>Latest AKC Bara notices</h2>
+        <p>Showing only notices published in the latest 30-day period.</p>
+      </div>
+
+      <input id="noticeSearch" class="notice-search" placeholder="Search recent notices..." />
+
+      <div class="notice-stats">
+        <div><strong id="totalNotices">0</strong><span>Recent Notices</span></div>
+        <div><strong id="activeNotices">0</strong><span>Active Deadlines</span></div>
+        <div><strong id="expiredNotices">0</strong><span>Expired Deadlines</span></div>
+      </div>
+
+      <div id="noticesContainer" class="notices-grid">Loading notices...</div>
     </section>
 
     <section class="panel report" id="report">
@@ -138,8 +166,7 @@
         <p class="eyebrow">Coming Next</p>
         <h2>Farmer rain reports</h2>
         <p>
-          Later, farmers can report: raining now, no rain, light rain, or heavy rain.
-          These local reports can help improve village-level accuracy over time.
+          Later, farmers can report local weather to help improve village-level accuracy.
         </p>
       </div>
       <button disabled>Report Local Weather</button>
@@ -147,7 +174,7 @@
   </main>
 
   <footer>
-    <p>KrishiSanjal · Built for Nepal farmers · Forecast powered by Open-Meteo</p>
+    <p>KrishiSanjal · Built for Nepal farmers · Forecast powered by Open-Meteo · Notices powered by AI summaries</p>
   </footer>
 
   <script src="script.js"></script>
