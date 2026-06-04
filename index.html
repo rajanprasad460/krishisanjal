@@ -57,6 +57,7 @@
         <label>
           Quick Location
           <select id="quickLocation">
+		  <option value="26.8932,85.1621,Simraraungadh">Simraraungadh</option>
             <option value="27.7172,85.3240,Kathmandu">Kathmandu</option>
             <option value="26.6500,87.9900,Birtamod, Jhapa">Birtamod, Jhapa</option>
             <option value="27.5291,83.4525,Bhairahawa">Bhairahawa</option>
@@ -132,7 +133,11 @@
         <p class="eyebrow">Hourly Timing</p>
         <h2>Rain and temperature by hour</h2>
       </div>
-      <div id="hourlyList" class="hourly-list"></div>
+      <!--
+	  <div id="hourlyList" class="hourly-list"></div>
+	  -->
+	  
+	  <div id="hourlyChart" class="weather-chart"></div>
     </section>
 
     <section class="panel">
@@ -140,7 +145,10 @@
         <p class="eyebrow">7-Day View</p>
         <h2>Upcoming rainfall and temperature</h2>
       </div>
+	  <!--
       <div id="dailyList" class="daily-list"></div>
+	  -->
+	  <div id="dailyChart" class="weather-chart"></div>
     </section>
 
     <section class="panel" id="notices">

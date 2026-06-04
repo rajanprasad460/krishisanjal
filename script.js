@@ -81,15 +81,11 @@ function renderAdvice(rainChance, rainAmount, temp) {
 }
 
 function renderHourly(hourly) {
-  const hourlyList = document.getElementById("hourlyList");
-  hourlyList.innerHTML = "";
-
-  if (!hourly || !Array.isArray(hourly.time)) {
-    hourlyList.innerHTML = "<p class='empty-text'>Hourly forecast is not available.</p>";
-    return;
-  }
+  const chart = document.getElementById("hourlyChart");
+  chart.innerHTML = "";
 
   const now = new Date();
+  let count = 0;
 
   for (let i = 0; i < hourly.time.length; i++) {
     const time = new Date(hourly.time[i]);
@@ -100,52 +96,74 @@ function renderHourly(hourly) {
       minute: "2-digit"
     });
 
-    const temp = formatValue(hourly.temperature_2m?.[i]);
-    const rainChance = formatValue(hourly.precipitation_probability?.[i]);
-    const rainAmount = formatValue(hourly.precipitation?.[i]);
+    const temp = hourly.temperature_2m[i];
+    const rainChance = hourly.precipitation_probability[i] || 0;
+    const rainAmount = hourly.precipitation[i] || 0;
 
-    const row = document.createElement("div");
-    row.className = "hour-row";
+    const barHeight = Math.max(4, rainChance);
 
-    row.innerHTML = `
-      <strong>${hour}</strong>
-      <span>🌡️ ${escapeHTML(temp)}°C</span>
-      <span>🌧️ ${escapeHTML(rainChance)}% chance</span>
-      <span>💧 ${escapeHTML(rainAmount)} mm</span>
+    const column = document.createElement("div");
+    column.className = "chart-column";
+
+    column.innerHTML = `
+      <div class="temp-label">🌡️ ${temp}°C</div>
+
+      <div class="bar-wrap">
+        <div class="rain-bar" style="height:${barHeight}%"></div>
+      </div>
+
+      <div class="rain-label">🌧️ ${rainChance}%</div>
+      <div class="rain-label">${rainAmount} mm</div>
+      <div class="time-label">${hour}</div>
     `;
 
-    hourlyList.appendChild(row);
+    chart.appendChild(column);
 
-    if (hourlyList.children.length >= 12) break;
-  }
-
-  if (hourlyList.children.length === 0) {
-    hourlyList.innerHTML = "<p class='empty-text'>No upcoming hourly forecast found.</p>";
+    count++;
+    if (count >= 12) break;
   }
 }
 
 function renderDaily(daily) {
-  const dailyList = document.getElementById("dailyList");
-  dailyList.innerHTML = "";
-
-  if (!daily || !Array.isArray(daily.time)) {
-    dailyList.innerHTML = "<p class='empty-text'>Daily forecast is not available.</p>";
-    return;
-  }
+  const chart = document.getElementById("dailyChart");
+  chart.innerHTML = "";
 
   for (let i = 0; i < daily.time.length; i++) {
-    const row = document.createElement("div");
-    row.className = "day-row";
+    const date = new Date(daily.time[i]);
 
-    row.innerHTML = `
-      <strong>${escapeHTML(daily.time[i])}</strong>
-      <span>🌡️ ${escapeHTML(formatValue(daily.temperature_2m_min?.[i]))}°C - ${escapeHTML(formatValue(daily.temperature_2m_max?.[i]))}°C</span>
-      <span>🌧️ ${escapeHTML(formatValue(daily.precipitation_probability_max?.[i]))}% · ${escapeHTML(formatValue(daily.precipitation_sum?.[i]))} mm</span>
+    const label = date.toLocaleDateString([], {
+      weekday: "short",
+      month: "short",
+      day: "numeric"
+    });
+
+    const rainChance = daily.precipitation_probability_max[i] || 0;
+    const rainAmount = daily.precipitation_sum[i] || 0;
+    const maxTemp = daily.temperature_2m_max[i];
+    const minTemp = daily.temperature_2m_min[i];
+
+    const barHeight = Math.max(4, rainChance);
+
+    const column = document.createElement("div");
+    column.className = "chart-column week-column";
+
+    column.innerHTML = `
+      <div class="temp-label">🌡️ ${minTemp}° / ${maxTemp}°C</div>
+
+      <div class="bar-wrap">
+        <div class="rain-bar" style="height:${barHeight}%"></div>
+      </div>
+
+      <div class="rain-label">🌧️ ${rainChance}%</div>
+      <div class="rain-label">${rainAmount} mm</div>
+      <div class="time-label">${label}</div>
     `;
 
-    dailyList.appendChild(row);
+    chart.appendChild(column);
   }
 }
+
+
 
 async function checkRain(lat, lon, name = "Selected Location") {
   try {
@@ -295,15 +313,17 @@ function formatListItem(item) {
 
   return item;
 }
-
 function listItems(items) {
-  if (!Array.isArray(items) || items.length === 0) {
+  if (!items || items.length === 0) {
     return "<p class='empty-text'>Not mentioned.</p>";
   }
 
-  return `<ul>${items.map(item => `<li>${escapeHTML(formatListItem(item))}</li>`).join("")}</ul>`;
+  return `
+    <ul class="detail-list">
+      ${items.map(item => `<li>${item}</li>`).join("")}
+    </ul>
+  `;
 }
-
 function latestPublishedNumber(notices) {
   const dates = notices
     .map(n => bsToNumber(n.published_date))
@@ -424,31 +444,54 @@ function renderNotices(notices) {
           <p>${escapeHTML(notice.summary || "Summary not available.")}</p>
         </div>
 
-        <details>
-          <summary>View full details</summary>
+        
+		<details class="notice-details">
+  <summary>View organized details</summary>
 
-          <p class="plain-explanation">
-            ${escapeHTML(notice.plain_explanation || notice.details || "No detailed explanation available.")}
-          </p>
+  <div class="details-grid">
+    <section class="detail-box highlight-box">
+      <h4>Plain Explanation</h4>
+      <p>${notice.plain_explanation || notice.details || "No detailed explanation available."}</p>
+    </section>
 
-          <h4>Eligibility</h4>
-          ${listItems(notice.eligibility)}
+    <section class="detail-box">
+      <h4>Who Can Apply</h4>
+      ${listItems(notice.eligibility)}
+    </section>
 
-          <h4>Required Documents</h4>
-          ${listItems(notice.required_documents)}
+    <section class="detail-box">
+      <h4>Required Documents</h4>
+      ${listItems(notice.required_documents)}
+    </section>
 
-          <h4>Benefits</h4>
-          ${listItems(notice.benefits)}
+    <section class="detail-box">
+      <h4>Benefits / Support</h4>
+      ${listItems(notice.benefits)}
+    </section>
 
-          <h4>Application Process</h4>
-          ${listItems(notice.application_process)}
+    <section class="detail-box">
+      <h4>Application Process</h4>
+      ${listItems(notice.application_process)}
+    </section>
 
-          <h4>Important Points</h4>
-          ${listItems(notice.important_points)}
+    <section class="detail-box">
+      <h4>Important Points</h4>
+      ${listItems(notice.important_points || notice.important_dates)}
+    </section>
 
-          <h4>Contact Information</h4>
-          ${listItems(notice.contact_information)}
-        </details>
+    <section class="detail-box">
+      <h4>Contact Information</h4>
+      ${listItems(notice.contact_information)}
+    </section>
+
+    <section class="detail-box raw-box">
+      <h4>Extracted Text Preview</h4>
+      <p>${notice.details || "No extracted text preview available."}</p>
+    </section>
+  </div>
+</details>
+		
+		
 
         <div class="notice-links">
           ${notice.pdf_url ? `<a href="${escapeHTML(notice.pdf_url)}" target="_blank" rel="noopener">Original File</a>` : ""}
